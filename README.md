@@ -60,7 +60,7 @@ Below are some of the base columns and engineered features mapped within our mac
 
 ### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles
 
-In healthcare fraud detection, analyzing isolated, individual claims rarely reveals fraudulent patterns. True fraud signals usually emerge from **behavioral anomalies over time at the provider level**. We engineered the historical velocity profiles for the following business and data design reasons:
+In healthcare fraud detection, analyzing isolated, individual claims rarely reveals fraudulent patterns. True fraud signals usually emerge from **behavioral anomalies over time at the provider level**. Simply converting the provider id to a numeric was not information relevant or preserving and would have caused issues with false patterns due to ordering and cardinality giving the model a false sense of information value. We decided to engineer historical velocity profiles for the following business and data design reasons:
 
 * **Capturing Behavioral Velocity:** Legitimate providers typically follow steady, predictable administrative rhythms. Fraudulent rings often engage in "burst" billing—submitting huge volumes of claims immediately following a supposed patient service to cash out before detection systems trigger an audit.
 * **Isolating Operational Risk Flags:** By computing `Hist_Pct_Fast_Claims` (claims filed under 5 days) alongside `Hist_Mean_Lag`, we can mathematically highlight providers who exhibit statistical anomalies in their billing velocity compared to industry standards.
