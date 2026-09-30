@@ -115,6 +115,20 @@ To fully recreate our clean feature matrices from the raw source files, the prep
 4. **Imputation & Fallback Application:** Merges the profiles back into all three splits. Any provider completely unseen during the training sequence is imputed with safe global metrics (`global_pct_fast`, `global_mean_lag`, `global_std_lag`) derived strictly from the training collection.
 5. **Cloud Serialization:** Combined tracking frames are tagged with their split identity and saved locally before uploading to GCS as paired `.csv` and optimized `.parquet` targets under the active `PROCESSING_DATE` directory namespace.
 
+### 📈 Distributional Skew Management Strategy (Criterion 10)
+
+Initial profiling of the feature matrix reveals severe distributional imbalances. The engineering pipeline is structured to explicitly handle these specific variations:
+
+* **Right-Skewed Financial Targets (`Claim_Amount`, `Approved_Amount`):** 
+  * **The Issue:** Legitimate claims cluster heavily around low values (Median: \$385.00), whereas fraudulent operations display an aggressive right-tail distribution with extreme maximum outliers scaling up to \$6,590.70.
+  * **The Mitigation:** These unbounded financial metrics are passed through monotonic log-transformations (or robust scalers) within our training pipeline to compress variance and stabilize gradient updates.
+* **Highly Imbalanced Target Slices (`Is_Fraud`):**
+  * **The Issue:** Severe class imbalance exists with 9,171 normal instances to only 829 fraud anomalies (~8.3% base fraud rate).
+  * **The Mitigation:** The dataset partition pipeline forces strict stratified mapping splits and dynamically computes an empirical training weight offset (`scale_pos_weight = num_neg / num_pos`) passed directly into the tree-hist algorithm to prevent structural convergence bias.
+* **High-Cardinality Sparsity (`Provider_ID`, `Diagnosis_Code`, `Procedure_Code`):**
+  * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices.
+  * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smoothing=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
+
 ---
 
 ## 🚀 Getting Started & Execution
@@ -125,7 +139,7 @@ Because this project relies on **Google Colab** wrappers and authentication prot
 
 1. **Launch the Workspace:**
    Upload the notebook in google colab and fill in the details for your project and bucket name in GCS. You will need a Kaggle api key to download the dataset and google authentication to connect to GCS.
-   
+
    If running this lab in Jupyter notebook additional configuration may be required which is not covered in this example.
 
 2. **Kaggle Authentication:**
