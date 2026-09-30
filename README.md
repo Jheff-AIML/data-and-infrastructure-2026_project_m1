@@ -115,7 +115,7 @@ To fully recreate our clean feature matrices from the raw source files, the prep
 4. **Imputation & Fallback Application:** Merges the profiles back into all three splits. Any provider completely unseen during the training sequence is imputed with safe global metrics (`global_pct_fast`, `global_mean_lag`, `global_std_lag`) derived strictly from the training collection.
 5. **Cloud Serialization:** Combined tracking frames are tagged with their split identity and saved locally before uploading to GCS as paired `.csv` and optimized `.parquet` targets under the active `PROCESSING_DATE` directory namespace.
 
-### 📈 Distributional Skew Management Strategy (Criterion 10)
+### 📈 Distributional Skew Management Strategy
 
 Initial profiling of the feature matrix reveals severe distributional imbalances. The engineering pipeline is structured to explicitly handle these specific variations:
 
