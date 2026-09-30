@@ -119,12 +119,13 @@ To fully recreate our clean feature matrices from the raw source files, the prep
 
 ## 🚀 Getting Started & Execution
 
-Because this project relies on **Google Colab** wrappers and authentication protocols, executing it directly inside Colab is the recommended path to prevent environment fragmentation.
+Because this project relies on **Google Colab** wrappers and authentication protocols, executing it directly inside Colab is the recommended path.
 
 ### Execution via Google Colab (Recommended)
 
 1. **Launch the Workspace:**
    Upload the notebook in google colab and fill in the details for your project and bucket name in GCS. You will need a Kaggle api key to download the dataset and google authentication to connect to GCS.
+   
    If running this lab in Jupyter notebook additional configuration may be required which is not covered in this example.
 
 2. **Kaggle Authentication:**
