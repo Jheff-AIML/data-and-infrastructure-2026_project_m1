@@ -58,14 +58,46 @@ Below are some of the base columns and engineered features mapped within our mac
 | `Is_Submission_Weekend` | Binary | Engineered | Flag (0/1) identifying if the claim was submitted on a Saturday or Sunday. |
 | `Hist_Pct_Fast_Claims` | Numerical | Engineered | Percentage of claims processed under 5 days (`Days_Between_Service_and_Claim`).
 
-### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles
+### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles - Feature Selection & Engineering Report: The Timeline Trap
 
-In healthcare fraud detection, analyzing isolated, individual claims rarely reveals fraudulent patterns. True fraud signals usually emerge from **behavioral anomalies over time at the provider level**. Simply converting the provider id to a numeric was not information relevant or preserving and would have caused issues with false patterns due to ordering and cardinality giving the model a false sense of information value. We decided to engineer historical velocity profiles for the following business and data design reasons:
+## 📊 Exploratory Data Analysis & Feature Profiling
 
-* **Capturing Behavioral Velocity:** Legitimate providers typically follow steady, predictable administrative rhythms. Fraudulent rings often engage in "burst" billing—submitting huge volumes of claims immediately following a supposed patient service to cash out before detection systems trigger an audit.
-* **Isolating Operational Risk Flags:** By computing `Hist_Pct_Fast_Claims` (claims filed under 5 days) alongside `Hist_Mean_Lag`, we can mathematically highlight providers who exhibit statistical anomalies in their billing velocity compared to industry standards.
-* **Strict Leakage Minimization:** Calculating these metrics *solely* within the training partition (`train_df`) and mapping them downstream via safe global fallbacks (`global_pct_fast`, etc.) guarantees that our model cannot "peek" into the evaluation windows. This simulates a realistic production deployment where future provider trends remain entirely unseen.
-* **Feature engineering decision:** An exploratory data analysis of the Days_Between_Service_and_Claim feature revealed a distinct separation in submission lag between legitimate claims (averaging 15.45 days) and fraudulent claims (averaging 2.97 days). Including this raw feature in predictive models introduces target leakage and the "Timeline Trap," where live production systems cannot calculate absolute lag metrics in real time. Replacing the raw metric with a leak-free provider velocity profiling framework prevents data shortcuts and ensures secure scaling in production.
+During initial feature profiling, an evaluation of the temporal feature `Days_Between_Service_and_Claim` revealed a stark, anomalous separation between legitimate and fraudulent transactions:
+
+### Profiling: Days_Between_Service_and_Claim
+* **Legitimate Claims (`Is_Fraud = 0`):** Mean lag of **15.45 days** (Median: 15.0). Range spans from 2 to 29 days. Zero values: 0.
+* **Fraudulent Claims (`Is_Fraud = 1`):** Mean lag of **2.97 days** (Median: 3.0). Range strictly capped between 0 and 6 days. Zero values: 115.
+
+---
+
+## 🪤 The Operational "Timeline Trap" & Target Leakage
+
+### 1. The Training Shortcut
+If the raw `Days_Between_Service_and_Claim` feature is passed directly into a machine learning model, the algorithm finds an artificial structural shortcut. Because **100% of historical fraud cases are clustered under 6 days**, the classifier achieves a near-perfect evaluation score (e.g., ROC-AUC > 0.99) by ignoring medical data entirely and routing decisions solely through this single time metric.
+
+### 2. Production Failure: Who Gets Penalized?
+Deploying this raw feature creates a catastrophic disconnect in a live environment:
+* **Penalizing the Efficient Physician:** Fraud operations move aggressively to cash out before detection systems trigger. However, speed itself is not unique to fraud. **An outstanding, prompt physician who maintains pristine, real-time administrative workflows and submits claims within 48 hours of a patient visit will be falsely flagged as a fraudster.**
+* **The Operational Blindspot:** The model never actually learns the underlying medical, financial, or geographic hallmarks of fraud; it merely penalizes operational efficiency.
+
+---
+
+## 🛠️ Infrastructure Solution: Provider Velocity Profiling
+
+To resolve this contradiction and protect legitimate, high-performing physicians, the raw, transaction-level metric was **dropped entirely** from the feature matrix and replaced with a leak-free **Historical Provider Velocity Profile** framework.
+
+### How the Leak-Free Pipeline Works (Milestone 1 Implementation)
+Instead of scoring a claim based on its *current* submission speed, the pipeline aggregates a provider's historical behavioral footprint:
+
+1. **Strict Partition Separation:** The dataset is split into Train (80%), Dev (10%), and Test (10%).
+2. **Train-Only Profiling:** Historical aggregates are calculated **strictly** using data inside the training split to prevent lookahead contamination:
+   * `Hist_Pct_Fast_Claims`: The proportion of a provider's past claims submitted in under 5 days.
+   * `Hist_Mean_Lag`: A provider's historical average submission turnaround.
+3. **Downstream Lookup Mapping:** These metrics are mapped to the validation and testing partitions as fixed behavioral characteristics. If a provider is unseen in the training window, they receive safe baseline indicators (`global_mean_lag`).
+
+### Core Benefit
+By transitioning from an instance-level shortcut to a provider-level behavioral profile, the model is forced to evaluate actual clinical anomalies, geographic patterns, and financial structures—ensuring stable, secure scaling in a live production environment without penalizing prompt healthcare providers.
+
 
 ### 8. Reproducibility of Data Collection (Criterion 9)
 * **Data Source:** Programmatically pulled from the official **Kaggle API**.
