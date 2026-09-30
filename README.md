@@ -46,7 +46,7 @@ This repository contains **Milestone 1** of the Healthcare Fraud Detection proje
   * Splitting is executed via a `random_state=42` and is strictly **stratified** by our target column (`stratify=df_health_fraud["Is_Fraud"]`) to preserve class proportions across folds.
   * To ensure **zero lookahead or data leakage**, all engineered historical velocity statistics are computed *only* on the training dataset (`train_df`). These aggregated metrics are then mapped to the validation and test datasets strictly as lookups. 
 
-### 7. Feature Descriptions (Criterion 7 & 8)
+### 7. Feature Descriptions (Criterion 7)
 Below are some of the base columns and engineered features mapped within our machine learning architecture:
 
 | Feature Name | Data Type | Feature Type | Description & Engineering Origin |
@@ -62,6 +62,7 @@ Below are some of the base columns and engineered features mapped within our mac
 ### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles - Feature Selection & Engineering Report: The Timeline Trap
 
 ## 📊 Exploratory Data Analysis & Feature Profiling
+Analysis of `Days_Between_Service_and_Claim` showed differences between legitimate and fraudulent claim timelines. A leak-free **Historical Provider Velocity Profile** framework is implemented using strict partition separation, train-only profiling, and lookup mapping. 
 
 During initial feature profiling, an evaluation of the temporal feature `Days_Between_Service_and_Claim` revealed a stark, anomalous separation between legitimate and fraudulent transactions:
 
@@ -99,15 +100,33 @@ Instead of scoring a claim based on its *current* submission speed, the pipeline
 ### Core Benefit
 By transitioning from an instance-level shortcut to a provider-level behavioral profile, the model is forced to evaluate actual clinical anomalies, geographic patterns, and financial structures—ensuring stable, secure scaling in a live production environment without penalizing prompt healthcare providers.
 
+### 8. Data Types and Serialization Formats (Criterion 8)
+To guarantee optimal execution efficiency, schema validation, and storage portability across our cloud environment, data types are strictly cast and managed.
 
-### 8. Reproducibility of Data Collection (Criterion 9)
+#### Raw Pandas Data Types Mapping
+The raw source includes standard pandas data types for identifiers, numerical counts, amounts, and flags ranging from `object`, `int64`, and `float64`.
+
+#### Pipeline Type Specifications
+* **Categorical Dimensions (`Provider_ID`)**: Handled computationally as high-cardinality structural strings, managed upstream of modeling via smooth Target Encoding configurations to avoid dimensional scaling explosion.
+* **Numerical Metrics (`Claim_Amount`, `Approved_Amount`, `Hist_Mean_Lag`, etc.)**: Represented and cast exclusively using 64-bit continuous floating-point descriptors (`float64`) or integers (`int64`) to preserve precision variance during transformations.
+* **Binary Markers (`Is_Fraud`, `Is_Submission_Weekend`)**: Structuralised natively as clean binary indicators (`int` 0/1) for zero-entropy processing.
+
+#### Serialization Formats
+* **Interchange Format (`.csv`)**: The partitioned matrix splits are structured into `healthcare_fraud_splits.csv` to ensure cross-platform human-readable portability.
+* **Production/Storage Format (`.parquet`)**: The final features are serialized into `healthcare_fraud_features.parquet`. Using Apache Parquet ensures strict metadata type preservation, column-oriented disk storage layouts for fast batch training I/O, and efficient Snappy compression footprints within our GCS data lake layers.
+
+---
+
+### 9. Reproducibility of Data Collection (Criterion 9)
 * **Data Source:** Programmatically pulled from the official **Kaggle API**.
 * **Collection Steps:** 
   1. Initialize connection to Kaggle via the execution environment using automated API credentials.
   2. Download the compressed raw archive directly into the local Colab runtime space.
   3. Extract files and stage them to the primary raw Google Cloud Storage repository path.
 
-### 9. Reproducibility of Preprocessing & Pipeline Steps (Criterion 10)
+### 10. Reproducibility of Preprocessing & Pipeline Steps (Criterion 10)
+Preprocessing executes a strict sequential pipeline including datetime parsing, partition isolation, profile generation, imputation, and cloud serialization. Distributional skews and imbalances are managed via log-transformations, stratified splits, and target encoding.
+
 To fully recreate our clean feature matrices from the raw source files, the preprocessing execution block in our notebook runs a strict sequential pipeline:
 1. **Datetime Parsing:** Converts `Claim_Submission_Date` into a standard pandas datetime format to engineer `Submission_Month` and `Is_Submission_Weekend`.
 2. **Strict Partition Isolation:** Splits the source matrix into Train, Dev, and Test dataframes using `sklearn.model_selection.train_test_split`.
