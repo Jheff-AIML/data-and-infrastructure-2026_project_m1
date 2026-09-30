@@ -1,9 +1,5 @@
 # Healthcare Fraud Detection (Milestone 1)
 
-[![Open In Colab](https://google.com)](https://google.com)
-[![Python](https://shields.io)](https://python.org)
-[![GCP](https://shields.io)](https://google.com)
-
 ## 📌 Project Overview
 This repository contains **Milestone 1** of the Healthcare Fraud Detection project for the Data and Infrastructure (2026) course. The primary goal of this project is to build an end-to-end data engineering pipeline capable of identifying fraudulent healthcare claims, minimizing financial leakage, and isolating anomalous billing behavior.
 
@@ -60,7 +56,7 @@ Below are some of the base columns and engineered features mapped within our mac
 | `Claim_Submission_Date` | Temporal | Base Feature | The raw timestamp when the healthcare claim was filed. |
 | `Submission_Month` | Numerical | Engineered | Extracted month component from `Claim_Submission_Date` to capture seasonality. |
 | `Is_Submission_Weekend` | Binary | Engineered | Flag (0/1) identifying if the claim was submitted on a Saturday or Sunday. |
-| `Hist_Pct_Fast_Claims` | Numerical | Engineered | Percentage of claims processed under 5 days (`Days_Between_Service_and_Claim  `Change runtime type` to **CPU** (standard processing is sufficient for Milestone 1 pipeline construction).
+| `Hist_Pct_Fast_Claims` | Numerical | Engineered | Percentage of claims processed under 5 days (`Days_Between_Service_and_Claim`).
 
 ### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles
 
@@ -109,5 +105,3 @@ Because this project relies on **Google Colab** wrappers and authentication prot
      ```
    * Follow the browser sign-in prompt using your active cloud project credentials to allow the runtime kernel to write/read from the target GCS bucket.
 
-4. **Hardware Execution:**
-   * Set your runtime type via `Runtime` > `Change runtime type` to **CPU** (standard processing is sufficient for Milestone 1 pipeline construction).
