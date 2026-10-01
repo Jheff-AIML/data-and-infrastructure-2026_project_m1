@@ -1,7 +1,7 @@
 # Healthcare Fraud Detection (Milestone 1)
 
 ## 📌 Project Overview
-This repository contains **Milestone 1** of the Healthcare Fraud Detection project for the Data and Infrastructure (2026) course. The primary goal of the overall project is to build an end-to-end data engineering pipeline capable of identifying fraudulent healthcare claims, minimizing financial leakage, and isolating anomalous billing behavior.
+This repository contains **Milestone 1** of the Healthcare Fraud Detection project for the Data and Infrastructure (2026) course. The primary goal of the overall project is to build an end-to-end data engineering & ML pipeline capable of identifying fraudulent healthcare claims, minimizing financial leakage, and isolating anomalous billing behavior.
 
 * **Notebook Location:** [`notebooks/healthcare_fraud_milestone_1.ipynb`](notebooks/healthcare_fraud_milestone_1.ipynb)
 
