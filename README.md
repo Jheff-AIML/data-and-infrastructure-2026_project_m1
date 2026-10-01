@@ -170,7 +170,7 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
   * **The Mitigation:** The dataset partition pipeline forces strict stratified mapping splits and dynamically computes an empirical training weight offset (`scale_pos_weight = num_neg / num_pos`) passed directly into the tree-hist algorithm to prevent structural convergence bias.
 * **High-Cardinality Sparsity (`Provider_ID`, `Diagnosis_Code`, `Procedure_Code`):**
   * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices.
-  * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smoothing=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
+  * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smooth=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
 
 ---
 
