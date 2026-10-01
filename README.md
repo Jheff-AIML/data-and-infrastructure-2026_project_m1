@@ -169,7 +169,7 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
   * **The Issue:** Severe class imbalance exists with 9,171 normal instances to only 829 fraud anomalies (~8.3% base fraud rate).
   * **The Mitigation:** The dataset partition pipeline forces strict stratified mapping splits and dynamically computes an empirical training weight offset (`scale_pos_weight = num_neg / num_pos`) passed directly into the tree-hist algorithm to prevent structural convergence bias.
 * **High-Cardinality Sparsity (`Provider_ID`, `Diagnosis_Code`, `Procedure_Code`):**
-  * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices.
+  * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices. Further the order or cardinality carry no inherent informational value and can throw the model if it associates the numerical ordinal value with informational importance or relevance. 
   * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smooth=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
 
 ---
