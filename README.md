@@ -47,16 +47,34 @@ This repository contains **Milestone 1** of the Healthcare Fraud Detection proje
   * To ensure **zero lookahead or data leakage**, all engineered historical velocity statistics are computed *only* on the training dataset (`train_df`). These aggregated metrics are then mapped to the validation and test datasets strictly as lookups. 
 
 ### 7. Feature Descriptions (Criterion 7)
-Below are some of the base columns and engineered features mapped within our machine learning architecture:
+
+Below are the base columns and engineered features mapped within our machine learning architecture:
 
 | Feature Name | Data Type | Feature Type | Description & Engineering Origin |
 | :--- | :--- | :--- | :--- |
-| `Provider_ID` | Categorical | Base Feature | Unique identifier hash for the healthcare facility or physician. |
-| `Is_Fraud` | Binary | **Target Variable** | 1 indicates a confirmed fraudulent claim; 0 indicates a legitimate claim. |
-| `Claim_Submission_Date` | Temporal | Base Feature | The raw timestamp when the healthcare claim was filed. |
-| `Submission_Month` | Numerical | Engineered | Extracted month component from `Claim_Submission_Date` to capture seasonality. |
-| `Is_Submission_Weekend` | Binary | Engineered | Flag (0/1) identifying if the claim was submitted on a Saturday or Sunday. |
-| `Hist_Pct_Fast_Claims` | Numerical | Engineered | Percentage of claims processed under 5 days (`Days_Between_Service_and_Claim`).
+| **Is_Fraud** | Binary (`int64`) | Target Variable | 1 indicates a confirmed fraudulent claim; 0 indicates a legitimate claim. Enforced as a strict integer indicator. |
+| **Provider_ID** | Categorical (`object`) | Base Feature | Unique identifier hash for the healthcare facility or physician. Used as the grouping key for behavioral velocity mapping. |
+| **Claim_Submission_Date** | Temporal (`object`) | Base Feature | The raw timestamp when the healthcare claim was filed. Completely dropped from the final feature matrix to prevent leakage. |
+| **Submission_Month** | Numerical (`int64`) | Engineered | Extracted month component from `Claim_Submission_Date` to safely capture seasonality without lookahead bias. |
+| **Is_Submission_Weekend** | Binary (`int64`) | Engineered | Flag (0/1) identifying if the claim was submitted on a Saturday or Sunday to uncover automated off-hours submission anomalies. |
+| **Diagnosis_Code** | Categorical (`object`) | Base Feature | High-cardinality standard medical billing code. Managed upstream via Smooth Target Encoding to prevent dimensional explosion. |
+| **Procedure_Code** | Categorical (`object`) | Base Feature | High-cardinality standard operational treatment code. Managed upstream via Smooth Target Encoding. |
+| **Provider_Specialty** | Categorical (`object`) | Base Feature | High-cardinality domain specialty of the provider. Missing values imputed as 'Unknown' to capture operational anomalies; managed via Target Encoding. |
+| **Patient_State** | Categorical (`object`) | Base Feature | Geographic state indicator of the patient. Managed via Smooth Target Encoding to extract regional risk baseline frequencies. |
+| **Insurance_Type** | Categorical (`object`) | Base Feature | Low-cardinality classification of the policy. Missing values imputed as 'Unknown'; processed downstream via One-Hot Encoding. |
+| **Visit_Type** | Categorical (`object`) | Base Feature | Low-cardinality classification of the medical encounter. Processed downstream via One-Hot Encoding (`drop='first'`). |
+| **Claim_Amount** | Numerical (`float64`) | Base Feature | The continuous monetary value requested by the provider. Cast explicitly to float64 to preserve precision variance. |
+| **Approved_Amount** | Numerical (`float64`) | Base Feature | The continuous monetary value approved for payout. Cast explicitly to float64 to preserve precision variance. |
+| **Length_of_Stay** | Numerical (`float64`) | Base Feature | Total continuous duration of the hospital or clinic encounter. Cast explicitly to float64. |
+| **Number_of_Claims_Per_Provider_Monthly** | Numerical (`int64`) | Base Feature | Operational load count showing billing volume per provider within a standard monthly window. |
+| **Chronic_Condition_Flag** | Numerical (`int64`) | Base Feature | Binary numeric flag indicating the presence of pre-existing patient underlying health risks. |
+| **Prior_Visits_12m** | Numerical (`float64`) | Base Feature | The number of medical encounters recorded for the patient in the prior year. Missing values safely imputed to 0. |
+| **Hist_Pct_Fast_Claims** | Numerical (`float64`) | Engineered | Provider Velocity Profile: Proportion of a provider's historical claims submitted in under 5 days, calculated strictly on train folds. |
+| **Hist_Mean_Lag** | Numerical (`float64`) | Engineered | Provider Velocity Profile: A provider's historical average claim submission turnaround window, mapped via leak-free lookups. |
+| **Hist_Lag_Std** | Numerical (`float64`) | Engineered | Provider Velocity Profile: The historical standard deviation of a provider's turnaround times to capture behavioral inconsistency. |
+| **Current_vs_Hist_Mean_Diff** | Numerical (`float64`) | Engineered | Behavioral Tally: The mathematical delta between the current claim's submission speed and the provider's historical mean lag window. |
+| **Current_Speed_Z_Score** | Numerical (`float64`) | Engineered | Behavioral Anomaly Weight: The statistical Z-Score measuring how many standard deviations the current transaction speed deviates from the provider's normal workflow routine. |
+
 
 
 ### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles - Feature Selection & Engineering Report: The Timeline Trap
@@ -100,6 +118,12 @@ Instead of scoring a claim based on its *current* submission speed, the pipeline
 ### Core Benefit
 By transitioning from an instance-level shortcut to a provider-level behavioral profile, the model is forced to evaluate actual clinical anomalies, geographic patterns, and financial structures—ensuring stable, secure scaling in a live production environment without penalizing prompt healthcare providers.
 
+### 🎛️ Dynamic Transaction Tallying (Defeating the Blind Spot)
+While pure provider reputation profiles eliminate target leakage, completely ignoring the current claim's speed creates an operational blind spot where the model evaluates a provider's history but ignores current transaction anomalies. 
+
+To bridge this gap without reintroducing the "Timeline Trap," our pipeline extracts leak-free relational velocity metrics (`Current_vs_Hist_Mean_Diff` and `Current_Speed_Z_Score`). Instead of analyzing raw transaction speed, the system evaluates how far the current claim's submission timeline deviates from that specific provider's established historical standard deviation. This allows our infrastructure to instantly flag a typically meticulous provider who suddenly exhibits high-velocity billing bursts, forcing the algorithm to balance historical baseline reputational data with live operational anomalies safely.
+
+
 ### 8. Data Types and Serialization Formats (Criterion 8)
 To guarantee optimal execution efficiency, schema validation, and storage portability across our cloud environment, data types are strictly cast and managed.
 
@@ -108,7 +132,7 @@ The raw source includes standard pandas data types for identifiers, numerical co
 
 #### Pipeline Type Specifications
 * **Categorical Dimensions (`Provider_ID`)**: Handled computationally as high-cardinality structural strings, managed upstream of modeling via smooth Target Encoding configurations to avoid dimensional scaling explosion.
-* **Numerical Metrics (`Claim_Amount`, `Approved_Amount`, `Hist_Mean_Lag`, etc.)**: Represented and cast exclusively using 64-bit continuous floating-point descriptors (`float64`) or integers (`int64`) to preserve precision variance during transformations.
+* **Numerical Metrics** (`Claim_Amount`, `Approved_Amount`, `Hist_Mean_Lag`, `Current_vs_Hist_Mean_Diff`, `Current_Speed_Z_Score`, etc.): Represented and cast exclusively using 64-bit continuous floating-point descriptors (`float64`) or integers (`int64`) to preserve precision variance during transformations.
 * **Binary Markers (`Is_Fraud`, `Is_Submission_Weekend`)**: Structuralised natively as clean binary indicators (`int` 0/1) for zero-entropy processing.
 
 #### Serialization Formats
