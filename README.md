@@ -54,6 +54,17 @@ We will be working with scikit-learn classifiers and will initially trial an XGB
     * *Memory Efficiency:* XGBoost and Random Forests can be memory-heavy when building deep trees. Pre-saving multiple copies of your dataset into a dictionary eats up RAM unnecessarily; this loop-based approach processes and discards data fold-by-fold.
     * *Pipelines for Data Safety:* By passing data slices straight into a scikit-learn `Pipeline`, data transformations are isolated to individual folds, guaranteeing zero data leakage without requiring manual `.copy()` calls on the underlying data frames.
 
+    ### Data Imputation & Quality Justifications
+
+To preserve dataset integrity and prevent artificial distribution shifts, missing values were systematically resolved based on the underlying operational logic of healthcare billing records:
+
+* **Categorical Imputation (`Insurance_Type`, `Provider_Specialty`):** 
+    * *Strategy:* Missing values are filled with a explicit `"Unknown"` string token.
+    * *Justification:* This preserves the complete sample volume without introducing data contamination or artificially inflating valid category frequencies. In fraud contexts, missing metadata can serve as an active signal; mapping nulls to a dedicated `"Unknown"` category allows tree-based models to evaluate if data omission correlates with anomalous behavior.
+* **Numerical Imputation (`Prior_Visits_12m`):** 
+    * *Strategy:* Null fields are mapped strictly to `0`.
+    * *Justification:* Analysis indicates these values represent instances where a patient has no logged history within the trailing 12-month window. In relational healthcare databases, a lack of historical transactions yields a null join rather than a numerical zero record. Imputing `0` corrects this structural artifact to accurately represent the true feature state without distorting the model's understanding of patient baseline history.
+
 ### 7. Feature Descriptions (Criterion 7)
 
 Below are the base columns and engineered features mapped within our machine learning architecture:
@@ -187,21 +198,43 @@ To eliminate variance caused by stochastic optimization, random row/column sampl
 * **Model Estimator:** Hardcoded natively within the gradient booster initialization as `XGBClassifier(random_state=42, ...)`
 
 ### 2. Sequential Preprocessing Pipeline Order
-Data must be processed in a linear sequence to prevent variable state contamination. The execution block runs this strict pipeline:
-1. **Datetime Parsing:** Converts `Claim_Submission_Date` into standard pandas datetime format to engineer `Submission_Month` and `Is_Submission_Weekend`.
-2. **Strict Partition Isolation:** Splits the source matrix into Train (80%), Dev (10%), and Test (10%) dataframes via scikit-learn.
-3. **Safe Profile Generation:** Groups the training set (`train_df`) by `Provider_ID` to generate historical velocity statistics (`Hist_Pct_Fast_Claims`, `Hist_Mean_Lag`, `Hist_Lag_Std`).
-4. **Imputation & Fallback Application:** Merges the profiles back into all three splits. Any provider completely unseen during the training sequence is imputed with safe global metrics derived strictly from the training collection.
-5. **Feature Transformation Pipeline (`ColumnTransformer` & `Pipeline`):**
-    * Continuous features (including engineered anomalies like `Current_vs_Hist_Mean_Diff` and `Current_Speed_Z_Score`) are normalized via `StandardScaler()`.
-    * High-cardinality categorical features are regularized via a smoothed `TargetEncoder`.
-    * Low-cardinality dimensions are encoded via `OneHotEncoder(drop='first')`.
-    * The calculated `imbalance_ratio` is applied to `scale_pos_weight` inside `XGBClassifier` to neutralize class imbalances based purely on the training distribution.
-6. **Cloud Serialization:** Combined tracking frames are tagged with their split identity and saved locally before uploading to GCS as paired `.csv` and optimized `.parquet` targets under the active `PROCESSING_DATE` directory namespace.
 
-### 3. Execution Requirements
-* **Environment:** Run using Python `3.10+` with all standard project package versions anchored via `requirements.txt`.
-* **Execution Flow:** Open `notebooks/healthcare_fraud_milestone_1.ipynb` and select **Restart & Run All**. The cells must be executed sequentially from top to bottom. Do not execute cells out of order to prevent caching dirty data views or broken lookup keys.
+Data must be processed in a linear sequence to prevent variable state contamination. The execution block runs this strict pipeline:
+
+* **1. Ingestion & Initial Schema Contract (Casting Wave 1):** 
+    * The raw source data is ingested via `pd.read_csv`.
+    * Baseline binary markers are immediately structuralized as clean integers (`Is_Fraud` cast via `.astype(int)`) to establish zero-entropy tracking early.
+    * Core numeric metrics (`Claim_Amount`, `Approved_Amount`, `Length_of_Stay`) are explicitly cast to continuous floating-point descriptors (`.astype(float)`) to lock in precision parameters before transformations.
+* **2. Baseline Imputation & Missing Value Resolution:** 
+    * Missing categorical fields (`Insurance_Type`, `Provider_Specialty`) are filled with a distinct `"Unknown"` token string to preserve structural variance.
+    * Missing transactional counts (`Prior_Visits_12m`) are mapped structurally to `0` to resolve unrecorded transaction joins.
+* **3. Datetime Parsing:** 
+    * Converts `Claim_Submission_Date` into standard pandas datetime format.
+    * Dynamically extracts features to engineer time-based markers: `Submission_Month` and `Is_Submission_Weekend`.
+* **4. Strict Partition Isolation:** 
+    * Splits the verified, cast source matrix into Train (80%), Dev (10%), and Test (10%) dataframes via `sklearn.model_selection.train_test_split`.
+* **5. Safe Profile Generation:** 
+    * Groups the isolated training set (`train_df`) by `Provider_ID` to safely generate historical velocity statistics (`Hist_Pct_Fast_Claims`, `Hist_Mean_Lag`, `Hist_Lag_Std`).
+* **6. Profile Merging & Fallback Application:** 
+    * Merges the training provider velocity profiles back into all three splits (Train, Dev, Test).
+    * Any provider completely unseen during the training sequence is safely imputed with global baseline metrics derived strictly from the training collection to eliminate future data leakage.
+* **7. Feature Transformation Pipeline (`ColumnTransformer` & `Pipeline`):**
+    * Continuous features (including engineered anomalies like `Current_vs_Hist_Mean_Diff` and `Current_Speed_Z_Score`) are normalized via `StandardScaler()`.
+    * High-cardinality categorical features (`Diagnosis_Code`, `Procedure_Code`, `Provider_Specialty`, and `Patient_State`) are regularized via a smoothed `TargetEncoder`.
+    * Low-cardinality dimensions (`Insurance_Type`, `Visit_Type`) are encoded via `OneHotEncoder(drop='first', sparse_output=False)`.
+    * The calculated `imbalance_ratio` is applied to `scale_pos_weight` inside `xgb.XGBClassifier` to neutralize class imbalances based purely on the training distribution.
+* **8. Cloud Serialization:** 
+    * Combined tracking frames are tagged with their split identity and saved locally.
+    * Files are uploaded to Google Cloud Storage (GCS) as paired, independent `.csv` and optimized `.parquet` targets under the active `PROCESSING_DATE` directory namespace to ensure portability and schema preservation.
+
+### 3. Execution Requirements & Validation Checkpoints
+
+* **Environment Alignment:** Run using Python `3.10+` with all software dependencies pinned via `requirements.txt`.
+* **Execution Flow:** Open `notebooks/healthcare_fraud_milestone_1.ipynb` and select **Restart & Run All**. The cells must be executed linearly from top to bottom. Do not alter cell sequence to prevent caching dirty variable states.
+* **Evaluation & Verification Checkpoint:** 
+    * Following data serialization, the notebook executes an automated **8-Fold Stratified Cross-Validation** routine directly on the training partition (`X_train`, `y_train`).
+    * This routine utilizes the pre-configured `Pipeline` to evaluate performance across four key metrics: `roc_auc`, `precision`, `recall`, and `f1`.
+    * **Expected Output:** Successful execution terminates by printing the baseline validation diagnostics (e.g., `8-Fold CV Mean ROC-AUC` and `8-Fold CV Mean F1-Score`) directly under Section 7 of the notebook.
 
 ---
 
