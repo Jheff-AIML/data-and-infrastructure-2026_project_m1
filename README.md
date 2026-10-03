@@ -129,41 +129,6 @@ While pure provider reputation profiles eliminate target leakage, completely ign
 
 To bridge this gap without reintroducing the "Timeline Trap," our pipeline extracts leak-free relational velocity metrics (`Current_vs_Hist_Mean_Diff` and `Current_Speed_Z_Score`). Instead of analyzing raw transaction speed, the system evaluates how far the current claim's submission timeline deviates from that specific provider's established historical standard deviation. This allows our infrastructure to instantly flag a typically meticulous provider who suddenly exhibits high-velocity billing bursts, forcing the algorithm to balance historical baseline reputational data with live operational anomalies safely.
 
-
-### 8. Data Types and Serialization Formats (Criterion 8)
-To guarantee optimal execution efficiency, schema validation, and storage portability across our cloud environment, data types are strictly cast and managed.
-
-#### Raw Pandas Data Types Mapping
-The raw source includes standard pandas data types for identifiers, numerical counts, amounts, and flags ranging from `object`, `int64`, and `float64`.
-
-#### Pipeline Type Specifications
-* **Categorical Dimensions (`Provider_ID`)**: Handled computationally as high-cardinality structural strings, managed upstream of modeling via smooth Target Encoding configurations to avoid dimensional scaling explosion.
-* **Numerical Metrics** (`Claim_Amount`, `Approved_Amount`, `Hist_Mean_Lag`, `Current_vs_Hist_Mean_Diff`, `Current_Speed_Z_Score`, etc.): Represented and cast exclusively using 64-bit continuous floating-point descriptors (`float64`) or integers (`int64`) to preserve precision variance during transformations.
-* **Binary Markers (`Is_Fraud`, `Is_Submission_Weekend`)**: Structuralised natively as clean binary indicators (`int` 0/1) for zero-entropy processing.
-
-#### Serialization Formats
-* **Interchange Format (`.csv`)**: The partitioned matrix splits are structured into `healthcare_fraud_splits.csv` to ensure cross-platform human-readable portability.
-* **Production/Storage Format (`.parquet`)**: The final features are serialized into `healthcare_fraud_features.parquet`. Using Apache Parquet ensures strict metadata type preservation, column-oriented disk storage layouts for fast batch training I/O, and efficient Snappy compression footprints within our GCS data lake layers.
-
----
-
-### 9. Reproducibility of Data Collection (Criterion 9)
-* **Data Source:** Programmatically pulled from the official **Kaggle API**.
-* **Collection Steps:** 
-  1. Initialize connection to Kaggle via the execution environment using automated API credentials.
-  2. Download the compressed raw archive directly into the local Colab runtime space.
-  3. Extract files and stage them to the primary raw Google Cloud Storage repository path.
-
-### 10. Reproducibility of Preprocessing & Pipeline Steps (Criterion 10)
-Preprocessing executes a strict sequential pipeline including datetime parsing, partition isolation, profile generation, imputation, and cloud serialization. Distributional skews and imbalances are managed via log-transformations, stratified splits, and target encoding.
-
-To fully recreate our clean feature matrices from the raw source files, the preprocessing execution block in our notebook runs a strict sequential pipeline:
-1. **Datetime Parsing:** Converts `Claim_Submission_Date` into a standard pandas datetime format to engineer `Submission_Month` and `Is_Submission_Weekend`.
-2. **Strict Partition Isolation:** Splits the source matrix into Train, Dev, and Test dataframes using `sklearn.model_selection.train_test_split`.
-3. **Safe Profile Generation:** Groups the training set (`train_df`) by `Provider_ID` to generate historical velocity statistics (`Hist_Pct_Fast_Claims`, `Hist_Mean_Lag`, `Hist_Lag_Std`).
-4. **Imputation & Fallback Application:** Merges the profiles back into all three splits. Any provider completely unseen during the training sequence is imputed with safe global metrics (`global_pct_fast`, `global_mean_lag`, `global_std_lag`) derived strictly from the training collection.
-5. **Cloud Serialization:** Combined tracking frames are tagged with their split identity and saved locally before uploading to GCS as paired `.csv` and optimized `.parquet` targets under the active `PROCESSING_DATE` directory namespace.
-
 ### 📈 Distributional Skew Management Strategy
 
 Initial profiling of the feature matrix reveals severe distributional imbalances. The engineering pipeline is structured to explicitly handle these specific variations:
@@ -177,6 +142,64 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
 * **High-Cardinality Sparsity (`Provider_ID`, `Diagnosis_Code`, `Procedure_Code`):**
   * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices. Further the order or cardinality carry no inherent informational value and can throw a model off balance if it associates the numerical ordinal value with informational importance or relevance. 
   * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smooth=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
+
+### 8. Data Types and Serialization Formats (Criterion 8)
+To guarantee optimal execution efficiency, schema validation, and storage portability across our cloud environment, data types are strictly cast and managed.
+
+#### Raw Pandas Data Types Mapping
+The raw source includes standard pandas data types for identifiers, numerical counts, amounts, and flags ranging from `object`, `int64`, and `float64`.
+
+#### Pipeline Type Specifications
+* **Categorical Dimensions:** 
+    * *Historical Aggregations (Provider_ID):* Handled upstream via custom group-by logic to extract historical velocity profiles, avoiding direct exposure of the raw high-cardinality ID string to the estimator.
+    * *High-Cardinality Features (Diagnosis_Code, Procedure_Code, Provider_Specialty, Patient_State):* Processed inside the scikit-learn pipeline using a smooth `TargetEncoder(smooth=10.0)` configuration. This maps structural strings to target conditional probabilities, preventing dimensional scaling explosion while preserving categorical relationships.
+    * *Low-Cardinality Features (Insurance_Type, Visit_Type):* Encoded using `OneHotEncoder(drop='first')` to cleanly capture distinct structural categories without introducing unnecessary multicollinearity.
+* **Numerical Metrics** (`Claim_Amount`, `Approved_Amount`, `Hist_Mean_Lag`, `Current_vs_Hist_Mean_Diff`, `Current_Speed_Z_Score`, etc.): Represented and cast exclusively using 64-bit continuous floating-point descriptors (`float64`) or integers (`int64`) to preserve precision variance during transformations.
+* **Binary Markers (`Is_Fraud`, `Is_Submission_Weekend`)**: Structuralised natively as clean binary indicators (`int` 0/1) for zero-entropy processing.
+
+### Serialization Formats
+
+* **Interchange Format (.csv):** The isolated train, dev, and test partition matrices are exported as independent, human-readable `.csv` files within the `PROCESSING_DATE` directory namespace to ensure cross-platform portability and easy debugging.
+* **Production/Storage Format (.parquet):** The final engineered features for each split are concurrently serialized into optimized `.parquet` targets. Using Apache Parquet ensures strict metadata schema preservation, column-oriented disk layouts for high-throughput training I/O, and highly efficient Snappy compression footprints within our GCS data lake layers.
+
+---
+
+### 9. Reproducibility of Data Collection (Criterion 9)
+* **Data Source:** Programmatically pulled from the official **Kaggle API**.
+* **Collection Steps:** 
+  1. Initialize connection to Kaggle via the execution environment using automated API credentials.
+  2. Download the compressed raw archive directly into the local Colab runtime space.
+  3. Extract files and stage them to the primary raw Google Cloud Storage repository path.
+
+  * A **data_card.md** has been included with the repository where additional detail can be found.
+
+## 10. Reproducibility of Preprocessing & Pipeline Steps (Criterion 10)
+
+To guarantee that a peer or evaluator can fully recreate our clean feature matrices and achieve identical model metrics down to the decimal point, follow this execution protocol:
+
+### 1. Stochastic State Controls (Random Seeds)
+To eliminate variance caused by stochastic optimization, random row/column sampling, and encoding mutations, a uniform random seed of **`42`** is explicitly enforced across all data and algorithmic operations:
+* **Partitioning:** `train_test_split(..., random_state=42)`
+* **High-Cardinality Target Encoding:** `TargetEncoder(smooth=10.0, random_state=42)` (Applied to `Diagnosis_Code`, `Procedure_Code`, `Provider_Specialty`, and `Patient_State`)
+* **Cross-Validation Splitter:** `StratifiedKFold(..., random_state=42, shuffle=True)`
+* **Model Estimator:** Hardcoded natively within the gradient booster initialization as `XGBClassifier(random_state=42, ...)`
+
+### 2. Sequential Preprocessing Pipeline Order
+Data must be processed in a linear sequence to prevent variable state contamination. The execution block runs this strict pipeline:
+1. **Datetime Parsing:** Converts `Claim_Submission_Date` into standard pandas datetime format to engineer `Submission_Month` and `Is_Submission_Weekend`.
+2. **Strict Partition Isolation:** Splits the source matrix into Train (80%), Dev (10%), and Test (10%) dataframes via scikit-learn.
+3. **Safe Profile Generation:** Groups the training set (`train_df`) by `Provider_ID` to generate historical velocity statistics (`Hist_Pct_Fast_Claims`, `Hist_Mean_Lag`, `Hist_Lag_Std`).
+4. **Imputation & Fallback Application:** Merges the profiles back into all three splits. Any provider completely unseen during the training sequence is imputed with safe global metrics derived strictly from the training collection.
+5. **Feature Transformation Pipeline (`ColumnTransformer` & `Pipeline`):**
+    * Continuous features (including engineered anomalies like `Current_vs_Hist_Mean_Diff` and `Current_Speed_Z_Score`) are normalized via `StandardScaler()`.
+    * High-cardinality categorical features are regularized via a smoothed `TargetEncoder`.
+    * Low-cardinality dimensions are encoded via `OneHotEncoder(drop='first')`.
+    * The calculated `imbalance_ratio` is applied to `scale_pos_weight` inside `XGBClassifier` to neutralize class imbalances based purely on the training distribution.
+6. **Cloud Serialization:** Combined tracking frames are tagged with their split identity and saved locally before uploading to GCS as paired `.csv` and optimized `.parquet` targets under the active `PROCESSING_DATE` directory namespace.
+
+### 3. Execution Requirements
+* **Environment:** Run using Python `3.10+` with all standard project package versions anchored via `requirements.txt`.
+* **Execution Flow:** Open `notebooks/healthcare_fraud_milestone_1.ipynb` and select **Restart & Run All**. The cells must be executed sequentially from top to bottom. Do not execute cells out of order to prevent caching dirty data views or broken lookup keys.
 
 ---
 
