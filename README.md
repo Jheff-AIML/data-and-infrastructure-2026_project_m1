@@ -41,19 +41,16 @@ This repository contains **Milestone 1** of the Healthcare Fraud Detection proje
 ## 🧪 Data Engineering & Methodology
 
 ### 6. Data Split & Validation Strategy (Criterion 6)
-* **Splitting Protocol:** The data is clean-split into explicit **Train (80%), Dev/Validation (10%), and Test (10%)** subsets using `sklearn.model_selection.train_test_split`.
-* **Leakage Prevention:** 
-  * Splitting is executed via a `random_state=42` and is strictly **stratified** by our target column (`stratify=df_health_fraud["Is_Fraud"]`) to preserve class proportions across folds.
-  * To ensure **zero lookahead or data leakage**, all engineered historical velocity statistics are computed *only* on the training dataset (`train_df`). These aggregated metrics are then mapped to the validation and test datasets strictly as lookups.
 
-  ## Validation Strategy
-
-To evaluate the generalization performance of our tree-based models (XGBoost and Random Forest) and prevent data leakage, an **8-fold Stratified Cross-Validation** approach was implemented. 
-
-### Architectural Decisions & Efficiency
-* **Dynamic In-Loop Validation:** Rather than pre-saving multiple slices of the dataset into a dictionary or explicit structures beforehand, the cross-validation logic processes splits dynamically within the training loop.
-* **Memory Efficiency:** XGBoost and Random Forests can be memory-heavy when building deep trees. Pre-saving multiple copies of your dataset into a dictionary eats up RAM unnecessarily; this loop-based approach processes and discards data fold-by-fold.
-* **Pipelines for Data Safety:** By passing data slices straight into a scikit-learn `Pipeline`, data transformations are isolated to individual folds, guaranteeing zero data leakage without requiring manual `.copy()` calls on the underlying data frames. 
+* **Splitting Protocol:** The data is clean-split into explicit Train (80%), Dev/Validation (10%), and Test (10%) subsets using `sklearn.model_selection.train_test_split`.
+* **Leakage Prevention:**
+    * Splitting is executed via a `random_state=42` and is strictly stratified by our target column (`stratify=df_health_fraud["Is_Fraud"]`) to preserve class proportions across folds.
+    * To ensure zero lookahead or data leakage, all engineered historical velocity statistics are computed only on the training dataset (`train_df`). These aggregated metrics are then mapped to the validation and test datasets strictly as lookups.
+* **Validation Strategy:** To evaluate the generalization performance of our tree-based models (XGBoost and Random Forest) and prevent data leakage, an **8-fold Stratified Cross-Validation** approach was implemented.
+* **Architectural Decisions & Efficiency:**
+    * *Dynamic In-Loop Validation:* Rather than pre-saving multiple slices of the dataset into a dictionary or explicit structures beforehand, the cross-validation logic processes splits dynamically within the training loop.
+    * *Memory Efficiency:* XGBoost and Random Forests can be memory-heavy when building deep trees. Pre-saving multiple copies of your dataset into a dictionary eats up RAM unnecessarily; this loop-based approach processes and discards data fold-by-fold.
+    * *Pipelines for Data Safety:* By passing data slices straight into a scikit-learn `Pipeline`, data transformations are isolated to individual folds, guaranteeing zero data leakage without requiring manual `.copy()` calls on the underlying data frames.
 
 ### 7. Feature Descriptions (Criterion 7)
 
