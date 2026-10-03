@@ -196,7 +196,7 @@ The raw source includes standard pandas data types for identifiers, numerical co
   2. Download the compressed raw archive directly into the local Colab runtime space.
   3. Extract files and stage them to the primary raw Google Cloud Storage repository path.
 
-* A **data_card.md** has been included in the data/ direcotry of the repository where additional detail can be found.
+* A **data_card.md** has been included in the data/ folder of the repository where additional detail can be found.
 
 ## 10. Reproducibility of Preprocessing & Pipeline Steps (Criterion 10)
 
