@@ -108,7 +108,7 @@ Deploying this raw feature creates a catastrophic disconnect in a live environme
 
 ---
 
-## 🛠️ Infrastructure Solution: Provider Velocity Profiling
+## 🛠️ Solution: Provider Velocity Profiling
 
 To resolve this contradiction and protect legitimate, high-performing physicians, the raw, transaction-level metric was **dropped entirely** from the feature matrix and replaced with a leak-free **Historical Provider Velocity Profile** framework.
 
@@ -171,7 +171,7 @@ The raw source includes standard pandas data types for identifiers, numerical co
   2. Download the compressed raw archive directly into the local Colab runtime space.
   3. Extract files and stage them to the primary raw Google Cloud Storage repository path.
 
-  * A **data_card.md** has been included with the repository where additional detail can be found.
+* A **data_card.md** has been included with the repository where additional detail can be found.
 
 ## 10. Reproducibility of Preprocessing & Pipeline Steps (Criterion 10)
 
