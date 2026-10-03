@@ -110,6 +110,8 @@ During initial feature profiling, an evaluation of the temporal feature `Days_Be
 
 ![Feature correlation to target](assets/target_correlations.png)
 
+![Pearson correlation](assets/feature_correlation.png)
+
 ---
 
 ## 🪤 The Operational "Timeline Trap" & Target Leakage
@@ -162,7 +164,7 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
   * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smooth=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
 
   ![Seaborn data visualization](assets/seaborn_visualization.png) 
-  
+
   ![Feature preprocessing](assets/feature_preprocessing.png)
 
 ### 8. Data Types and Serialization Formats (Criterion 8)
