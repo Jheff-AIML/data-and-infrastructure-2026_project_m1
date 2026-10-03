@@ -257,12 +257,12 @@ Because this project relies on **Google Colab** wrappers and authentication prot
 ### Execution via Google Colab (Recommended)
 
 1. **Launch the Workspace:**
-   Upload the notebook in google colab and fill in the details for your project and bucket name in GCS. You will need a Kaggle api key to download the dataset and google authentication to connect to GCS.
+   Upload the notebook ipynb file to google colab and fill in the details for your GCS project and bucket name in the indicated section. You will need a Kaggle api key to download the dataset and google authentication to connect to GCS. The notebook will pull the requirements.txt and create the necessary infrastructure once the required authentication has been provided.
 
    If running this lab in Jupyter notebook additional configuration may be required which is not covered in this example.
 
 2. **Kaggle Authentication:**
-   * When executing the data collection cell, ensure you upload or provide your `kaggle.json` API token file to allow programmatical data downloading.
+   * When executing the data collection cell, ensure you provide your `kaggle.json` API token file or API key to allow programmatical data downloading.
 
 3. **Google Cloud Platform (GCP) Authentication:**
    * Run the interactive cell containing:
