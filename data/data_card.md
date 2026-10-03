@@ -17,6 +17,7 @@
 * **Origin:** Curated and uploaded to Kaggle by Data Scientist Nudrat Abbas. The data structure relies on a log-normal distribution to mimic actual medical billing anomalies without using PII.
 * **Collection Date:** Published/Updated in 2026.
 * **Maintainer:** Nudrat Abbas (via Kaggle).
+* **Link to Kaggle source:** https://www.kaggle.com/datasets/nudratabbas/healthcare-fraud-detection-dataset
 
 ---
 
