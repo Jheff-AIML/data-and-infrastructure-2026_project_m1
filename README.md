@@ -1,7 +1,9 @@
 # Healthcare Fraud Detection (Milestone 1)
 
 ## 📌 Project Overview
-This repository contains **Milestone 1** of the Healthcare Fraud Detection project for the Data and Infrastructure (2026) course. The primary goal of the overall project is to build an end-to-end data engineering & machine learning pipeline capable of identifying fraudulent healthcare claims, minimizing financial leakage, and isolating anomalous billing behavior. We will be working with scikit-learn classifiers and will initially trial an XGBoost algorithm. Future work may include comparing this to a Random Forest approach. Tabular data (like healthcare fraud records) is famously dominated by tree-based ensembles, so deep learning would likely add a lot of complexity for very little, if any, performance gain.
+This repository contains **Milestone 1** of the Healthcare Fraud Detection project for the Data and Infrastructure (2026) course. The primary goal of the overall project is to build an end-to-end data engineering & machine learning pipeline capable of identifying fraudulent healthcare claims, minimizing financial leakage, and isolating anomalous billing behavior. 
+
+We will be working with scikit-learn classifiers and will initially trial an XGBoost algorithm. Future work may include comparing this to a Random Forest approach. Tabular data (like healthcare fraud records) is famously dominated by tree-based ensembles, so deep learning would likely add a lot of complexity for very little, if any, performance gain.
 
 * **Notebook Location:** [`notebooks/healthcare_fraud_milestone_1.ipynb`](notebooks/healthcare_fraud_milestone_1.ipynb)
 
