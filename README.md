@@ -163,7 +163,7 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
   * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices. Further the order or cardinality carry no inherent informational value and can throw a model off balance if it associates the numerical ordinal value with informational importance or relevance. 
   * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smooth=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
   
-  **Visual Exploratory** (hue='Is_Fraud')
+  <u>**Visual Exploratory**</u> (hue='Is_Fraud')
   ![Feature correlation to target](assets/seaborn_visualization.png)
 
 ### 8. Data Types and Serialization Formats (Criterion 8)
