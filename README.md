@@ -103,6 +103,8 @@ Analysis of `Days_Between_Service_and_Claim` showed differences between legitima
 
 During initial feature profiling, an evaluation of the temporal feature `Days_Between_Service_and_Claim` revealed a stark, anomalous separation between legitimate and fraudulent transactions:
 
+![Days_Between_Service_and_Claim](assets/days_between.png)
+
 ### Profiling: Days_Between_Service_and_Claim
 * **Legitimate Claims (`Is_Fraud = 0`):** Mean lag of **15.45 days** (Median: 15.0). Range spans from 2 to 29 days. Zero values: 0.
 * **Fraudulent Claims (`Is_Fraud = 1`):** Mean lag of **2.97 days** (Median: 3.0). Range strictly capped between 0 and 6 days. Zero values: 115.
