@@ -166,8 +166,6 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
   **Visual Exploratory** hue='Is_Fraud'
   ![Feature correlation to target](assets/seaborn_visualization.png)
 
-  ![Feature preprocessing](assets/feature_preprocessing.png)
-
 ### 8. Data Types and Serialization Formats (Criterion 8)
 To guarantee optimal execution efficiency, schema validation, and storage portability across our cloud environment, data types are strictly cast and managed.
 
@@ -208,6 +206,8 @@ To eliminate variance caused by stochastic optimization, random row/column sampl
 * **High-Cardinality Target Encoding:** `TargetEncoder(smooth=10.0, random_state=42)` (Applied to `Diagnosis_Code`, `Procedure_Code`, `Provider_Specialty`, and `Patient_State`)
 * **Cross-Validation Splitter:** `StratifiedKFold(..., random_state=42, shuffle=True)`
 * **Model Estimator:** Hardcoded natively within the gradient booster initialization as `XGBClassifier(random_state=42, ...)`
+
+![Feature preprocessing](assets/feature_preprocessing.png)
 
 ### 2. Sequential Preprocessing Pipeline Order
 
