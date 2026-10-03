@@ -95,7 +95,6 @@ Below are the base columns and engineered features mapped within our machine lea
 | **Current_Speed_Z_Score** | Numerical (`float64`) | Engineered | Behavioral Anomaly Weight: The statistical Z-Score measuring how many standard deviations the current transaction speed deviates from the provider's normal workflow routine. |
 
 
-
 ### 💡 Engineering Rationale: Why We Engineered Provider Velocity Profiles - Feature Selection & Engineering Report: The Timeline Trap
 
 ## 📊 Exploratory Data Analysis & Feature Profiling
@@ -108,6 +107,8 @@ During initial feature profiling, an evaluation of the temporal feature `Days_Be
 ### Profiling: Days_Between_Service_and_Claim
 * **Legitimate Claims (`Is_Fraud = 0`):** Mean lag of **15.45 days** (Median: 15.0). Range spans from 2 to 29 days. Zero values: 0.
 * **Fraudulent Claims (`Is_Fraud = 1`):** Mean lag of **2.97 days** (Median: 3.0). Range strictly capped between 0 and 6 days. Zero values: 115.
+
+![Feature correlation to target](assets/target_correlations.png)
 
 ---
 
@@ -148,6 +149,8 @@ To bridge this gap without reintroducing the "Timeline Trap," our pipeline extra
 
 Initial profiling of the feature matrix reveals severe distributional imbalances. The engineering pipeline is structured to explicitly handle these specific variations:
 
+![Data skew metrics](assets/data_skew.png)
+
 * **Right-Skewed Financial Targets (`Claim_Amount`, `Approved_Amount`):** 
   * **The Issue:** Legitimate claims cluster heavily around low values (Median: \$385.00), whereas fraudulent operations display an aggressive right-tail distribution with extreme maximum outliers scaling up to \$6,590.70.
   * **The Mitigation:** These unbounded financial metrics are passed through monotonic log-transformations (or robust scalers) within our training pipeline to compress variance and stabilize gradient updates.
@@ -158,6 +161,8 @@ Initial profiling of the feature matrix reveals severe distributional imbalances
   * **The Issue:** Tracking individual categorical dimensions introduces massive high-cardinality dimensionality explosion if passed to naive one-hot encoding matrices. Further the order or cardinality carry no inherent informational value and can throw a model off balance if it associates the numerical ordinal value with informational importance or relevance. 
   * **The Mitigation:** The pipeline applies a regularized `TargetEncoder(smooth=10.0)` setup, tracking specific historical category conditional targets rather than expanding sparse structural columns.
 
+  ![Seaborn data visualization](assets/seaborn_visualization.png) 
+  
   ![Feature preprocessing](assets/feature_preprocessing.png)
 
 ### 8. Data Types and Serialization Formats (Criterion 8)
